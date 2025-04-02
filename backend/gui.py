@@ -8,7 +8,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl, QThread, pyqtSignal, Qt
 
 # Flask API URL (Backend)
-API_URL = "http://localhost:5000/location"
+API_URL = "https://vehicle-tracker-1-r7vo.onrender.com"
 
 class LocationUpdater(QThread):
     location_updated = pyqtSignal(float, float)  # Signal to update UI
