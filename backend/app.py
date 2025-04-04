@@ -19,7 +19,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # MongoDB Atlas Connection
 MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
-    raise ValueError("\u274c MongoDB URI is missing! Set MONGO_URI in .env file.")
+    raise ValueError("❌ MongoDB URI is missing! Set MONGO_URI in .env file.")
 
 client = MongoClient(MONGO_URI)
 db = client["vehicle_tracking"]
@@ -33,7 +33,7 @@ def get_real_time_location():
     """Fetches real-time location using OpenStreetMap's Nominatim API."""
     url = "https://nominatim.openstreetmap.org/search"
     params = {
-        "q": "Chennai, India",  # Modify to dynamically fetch location if needed
+        "q": "Chennai, India",  # Modify if needed
         "format": "json",
     }
     headers = {"User-Agent": "VehicleTrackerApp"}
@@ -60,14 +60,13 @@ def get_location():
         return jsonify({"error": "Could not fetch location"}), 500
 
     timestamp = datetime.utcnow()
-    speed = 0  # Default speed
+    speed = 0
 
     if last_location and last_timestamp:
         distance = geodesic(last_location, (lat, lon)).meters
         time_diff = (timestamp - last_timestamp).total_seconds()
-        
-        if time_diff > 0:  # Avoid division by zero
-            speed = distance / time_diff  # meters per second
+        if time_diff > 0:
+            speed = distance / time_diff
 
     last_location = (lat, lon)
     last_timestamp = timestamp
@@ -76,21 +75,19 @@ def get_location():
         "latitude": lat,
         "longitude": lon,
         "timestamp": timestamp.isoformat(),
-        "speed": round(speed, 2)  # Round speed for clarity
+        "speed": round(speed, 2)
     }
 
-    # Store in MongoDB and convert ObjectId to string
     inserted_data = collection.insert_one(location_data)
     location_data["_id"] = str(inserted_data.inserted_id)
 
-    # Emit real-time location update in a separate thread
     threading.Thread(target=lambda: socketio.emit("location_update", location_data)).start()
 
     return jsonify(location_data)
 
 @app.route("/update_location", methods=["POST"])
 def update_location():
-    """Receive live location updates from an external source (e.g., mobile device)."""
+    """Receives live location updates from an external device (mobile app, Termux, etc)."""
     global last_location, last_timestamp
     data = request.json
     lat = data.get("latitude")
@@ -100,12 +97,11 @@ def update_location():
         return jsonify({"error": "Invalid data"}), 400
 
     timestamp = datetime.utcnow()
-    speed = 0  # Default speed
+    speed = 0
 
     if last_location and last_timestamp:
         distance = geodesic(last_location, (lat, lon)).meters
         time_diff = (timestamp - last_timestamp).total_seconds()
-        
         if time_diff > 0:
             speed = distance / time_diff
 
@@ -125,6 +121,16 @@ def update_location():
     threading.Thread(target=lambda: socketio.emit("location_update", location_data)).start()
 
     return jsonify({"success": True, "data": location_data}), 200
+
+@app.route("/latest-location", methods=["GET"])
+def get_latest_location():
+    """Returns the most recent location entry from the database."""
+    latest = collection.find_one(sort=[("timestamp", -1)])
+    if latest:
+        latest["_id"] = str(latest["_id"])
+        return jsonify(latest)
+    else:
+        return jsonify({"error": "No data available"}), 404
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)
