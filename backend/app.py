@@ -31,7 +31,7 @@ last_timestamp = None
 
 def get_real_time_location():
     """Fetches real-time location using OpenStreetMap's Nominatim API."""
-    url = "https://vehicle-tracker-1-r7vo.onrender.com/get_location"
+    url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": "Chennai, India",  # Modify if needed
         "format": "json",
@@ -50,7 +50,7 @@ def get_real_time_location():
         print("⚠️ Error fetching location:", str(e))
         return None, None
 
-@app.route("/get_location", methods=["GET"])
+@app.route("/location", methods=["GET"])
 def get_location():
     """Fetches, stores, and broadcasts the real-time location."""
     global last_location, last_timestamp
